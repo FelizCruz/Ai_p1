@@ -12,46 +12,49 @@ from typing import List
 
 def create_database(db_name="fitness_workouts.db"):
     """Creates the SQLite database and populates it with workouts."""
-    connection = sqlite3.connect(db_name)
-    cursor = connection.cursor()
+    try:
+        connection = sqlite3.connect(db_name)
+        cursor = connection.cursor()
 
-    # Drop the existing table if it exists
-    cursor.execute("DROP TABLE IF EXISTS workouts")
+        # Drop the existing table if it exists
+        cursor.execute("DROP TABLE IF EXISTS workouts")
 
-    # Create table for workouts
-    cursor.execute("""
-    CREATE TABLE IF NOT EXISTS workouts (
-        name TEXT PRIMARY KEY,
-        calories_burned INTEGER,
-        duration INTEGER,
-        reps INTEGER,
-        intensity TEXT,
-        heuristic_weight INTEGER
-    );
-    """)
+        # Create table for workouts
+        cursor.execute("""
+        CREATE TABLE IF NOT EXISTS workouts (
+            name TEXT PRIMARY KEY,
+            calories_burned INTEGER,
+            duration INTEGER,
+            reps INTEGER,
+            intensity TEXT,
+            heuristic_weight INTEGER
+        );
+        """)
 
-    # Insert workout data
-    workouts_data = [
-        ("Running", 500, 30, 0, "high", 1),
-        ("Weightlifting", 300, 45, 10, "high", 2),
-        ("Yoga", 200, 60, 0, "low", 3),
-        ("HIIT", 600, 20, 15, "high", 1),
-        ("Cycling", 400, 45, 0, "high", 2),
-        ("Swimming", 600, 30, 0, "high", 1),
-        ("Pilates", 250, 40, 0, "low", 3),
-        ("Rock Climbing", 500, 60, 5, "high", 2),
-        ("Dance Class", 300, 60, 0, "low", 3),
-        ("Boxing", 450, 30, 15, "high", 1),
-        ("Walking", 150, 60, 0, "low", 3)
-    ]
+        # Insert workout data
+        workouts_data = [
+            ("Running", 500, 30, 0, "high", 1),
+            ("Weightlifting", 300, 45, 10, "high", 2),
+            ("Yoga", 200, 60, 0, "low", 3),
+            ("HIIT", 600, 20, 15, "high", 1),
+            ("Cycling", 400, 45, 0, "high", 2),
+            ("Swimming", 600, 30, 0, "high", 1),
+            ("Pilates", 250, 40, 0, "low", 3),
+            ("Rock Climbing", 500, 60, 5, "high", 2),
+            ("Dance Class", 300, 60, 0, "low", 3),
+            ("Boxing", 450, 30, 15, "high", 1),
+            ("Walking", 150, 60, 0, "low", 3)
+        ]
 
-    # Insert data into the table
-    cursor.executemany("INSERT OR IGNORE INTO workouts VALUES (?, ?, ?, ?, ?, ?);", workouts_data)
+        # Insert data into the table
+        cursor.executemany("INSERT OR IGNORE INTO workouts VALUES (?, ?, ?, ?, ?, ?);", workouts_data)
 
-    # Commit changes and close connection
-    connection.commit()
-    connection.close()
-    print(f"Database '{db_name}' created and populated successfully.")
+        # Commit changes and close connection
+        connection.commit()
+        connection.close()
+        print(f"Database '{db_name}' created and populated successfully.")
+    except sqlite3.Error as e:
+        print(f"An error occurred: {e}")
 
 class AStarWorkoutPlanner:
     def __init__(self, db_name):
@@ -63,14 +66,18 @@ class AStarWorkoutPlanner:
 
     def load_data(self, db_name):
         """Load workouts from the SQLite database."""
-        connection = sqlite3.connect(db_name)
-        cursor = connection.cursor()
+        try:
+            connection = sqlite3.connect(db_name)
+            cursor = connection.cursor()
 
-        cursor.execute("SELECT name, calories_burned, duration, reps, intensity, heuristic_weight FROM workouts")
-        workouts = [{"name": row[0], "calories_burned": row[1], "duration": row[2], "reps": row[3], "intensity": row[4], "heuristic_weight": row[5]} for row in cursor.fetchall()]
+            cursor.execute("SELECT name, calories_burned, duration, reps, intensity, heuristic_weight FROM workouts")
+            workouts = [{"name": row[0], "calories_burned": row[1], "duration": row[2], "reps": row[3], "intensity": row[4], "heuristic_weight": row[5]} for row in cursor.fetchall()]
 
-        connection.close()
-        return workouts
+            connection.close()
+            return workouts
+        except sqlite3.Error as e:
+            print(f"An error occurred: {e}")
+            return []
 
     def heuristic(self, state, goal_calories):
         """Estimate remaining calories to burn."""
@@ -91,7 +98,7 @@ class AStarWorkoutPlanner:
         counter = 0
 
         heapq.heappush(frontier, (self.heuristic(start_state, goal_calories), counter, start_state))
-        self.graph.add_node(0, calories=0, workout="Start")
+        self.graph.add_node(counter, calories=0, workout="Start")
 
         while frontier:
             heuristic_value, _, current_state = heapq.heappop(frontier)
@@ -181,20 +188,25 @@ class WorkoutPlannerApp:
         self.caloric_intake_entry = ttk.Entry(root)
         self.caloric_intake_entry.grid(row=4, column=1, padx=10, pady=10)
 
+        self.target_weight_label = ttk.Label(root, text="Enter your target weight (kg):")
+        self.target_weight_label.grid(row=5, column=0, padx=10, pady=10, sticky="W")
+        self.target_weight_entry = ttk.Entry(root)
+        self.target_weight_entry.grid(row=5, column=1, padx=10, pady=10)
+
         self.intensity_label = ttk.Label(root, text="Choose your intensity:")
-        self.intensity_label.grid(row=5, column=0, padx=10, pady=10, sticky="W")
+        self.intensity_label.grid(row=6, column=0, padx=10, pady=10, sticky="W")
         self.intensity_var = tk.StringVar(root)
         self.intensity_var.set("low")
         self.low_intensity_radio = ttk.Radiobutton(root, text="Low Intensity", variable=self.intensity_var, value="low")
-        self.low_intensity_radio.grid(row=5, column=1, padx=10, pady=10, sticky="W")
+        self.low_intensity_radio.grid(row=6, column=1, padx=10, pady=10, sticky="W")
         self.high_intensity_radio = ttk.Radiobutton(root, text="High Intensity", variable=self.intensity_var, value="high")
-        self.high_intensity_radio.grid(row=5, column=2, padx=10, pady=10, sticky="W")
+        self.high_intensity_radio.grid(row=6, column=2, padx=10, pady=10, sticky="W")
 
         self.plan_button = ttk.Button(root, text="Get Workout Plan", command=self.get_workout_plan)
-        self.plan_button.grid(row=6, column=0, columnspan=3, padx=10, pady=20)
+        self.plan_button.grid(row=7, column=0, columnspan=3, padx=10, pady=20)
 
         self.result_text = tk.Text(root, height=10, width=40, bg="#00CED1", fg="black", font=("Helvetica", 12))
-        self.result_text.grid(row=7, column=0, columnspan=3, padx=10, pady=10)
+        self.result_text.grid(row=8, column=0, columnspan=3, padx=10, pady=10)
 
         self.animation = None  # Keep a reference to the animation
 
@@ -205,11 +217,27 @@ class WorkoutPlannerApp:
             age = int(self.age_entry.get())
             gender = self.gender_var.get()
             caloric_intake = int(self.caloric_intake_entry.get())
+            target_weight = int(self.target_weight_entry.get())
             intensity = self.intensity_var.get()
 
             # Calculate BMR
             bmr = self.calculate_bmr(weight, height, age, gender)
-            goal_calories = caloric_intake - bmr
+
+            # Calculate the total caloric deficit needed to reach the target weight
+            weight_loss = weight - target_weight
+            total_caloric_deficit = weight_loss * 7700  # 1 kg of body weight is approximately 7700 kcal
+
+            # Determine the time frame based on intensity
+            if intensity == "high":
+                time_frame = max(30, total_caloric_deficit // 7700 * 30)  # Optimal healthy time frame
+            else:
+                time_frame = max(60, total_caloric_deficit // 7700 * 60)  # Less optimal time frame
+
+            # Calculate the daily caloric deficit needed
+            daily_caloric_deficit = total_caloric_deficit / time_frame
+
+            # Calculate the goal calories
+            goal_calories = max(0, caloric_intake - daily_caloric_deficit)  # Ensure goal calories are not negative
 
             planner = AStarWorkoutPlanner("fitness_workouts.db")
             workout_plan = planner.find_workout_plan(goal_calories, intensity)
@@ -221,6 +249,7 @@ class WorkoutPlannerApp:
                     result_text += f"- {workout['name']} ({workout['duration']} mins, {workout['reps']} reps, {workout['sets']} sets)\n"
                     total_calories_burned += workout["calories_burned"] * workout["sets"]
                 result_text += f"\nEstimated Calories Burned: {total_calories_burned} kcal"
+                result_text += f"\nDuration of the program: {time_frame // 30} months"
                 self.result_text.delete(1.0, tk.END)
                 self.result_text.insert(tk.END, result_text)
 
@@ -256,6 +285,8 @@ class WorkoutPlannerApp:
                 messagebox.showinfo("Error", "No valid workout plan found.")
         except ValueError as e:
             messagebox.showerror("Input Error", str(e))
+        except Exception as e:
+            messagebox.showerror("Error", f"An unexpected error occurred: {str(e)}")
 
     def calculate_bmr(self, weight: int, height: int, age: int, gender: str) -> float:
         """Calculate Basal Metabolic Rate (BMR) based on user input."""
