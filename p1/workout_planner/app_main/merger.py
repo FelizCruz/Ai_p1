@@ -5,14 +5,18 @@ import subprocess
 # Function to run Python scripts
 def run_code1():
     try:
-        subprocess.run(["python", "crushednuts.py"])  # Replace with actual script name
+        result1 = subprocess.run(["python", "betadays.py"], check=True)
+        print(f"betadays.py exited with code: {result1.returncode}")
+    # Run the second script
+        result2 = subprocess.run(["python", "crushednuts.py"], check=True)
+        print(f"crushednuts.py exited with code: {result2.returncode}")
     except Exception as e:
         messagebox.showerror("Error", f"Failed to run Code 1:\n{str(e)}")
 
 def run_code2():
     try:
-        subprocess.run(["python", "fp.py"])  # Replace with actual script name
-    except Exception as e:
+        subprocess.run(["python", "fp.py"]) 
+    except Exception as e:     
         messagebox.showerror("Error", f"Failed to run Code 2:\n{str(e)}")
 
 # Create the main window
